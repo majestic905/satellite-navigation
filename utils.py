@@ -27,22 +27,19 @@ def visible_from_ded_position(position, satellite):
     """
     return position.dot(satellite - position) >= 0
 
-def distance(position, satellite, spherical):
-    # spherical defines whether 'position' is spherical coordinates or rectangular
 
-    if spherical:
-        position = two_to_one(position)
-
+def distance(position, satellite):
     return np.linalg.norm(position-satellite)
 
-def distance_derivative_sph(position, satellite, distance):
-    R, psi, lam = position
-    x, y, z = satellite
 
-    dq_dpsi = R/distance * (x*math.sin(psi)*math.cos(lam) + y*math.sin(psi)*math.sin(lam) - z*math.cos(psi))
-    dq_dlam = R/distance * math.cos(psi)*(x*math.sin(lam) - y*math.cos(lam))
+def distance_derivative(position, satellite, distance, spherical):
+    if spherical:
+        R, psi, lam = position
+        x, y, z = satellite
 
-    return [dq_dpsi, dq_dlam]
+        dq_dpsi = R/distance * (x*math.sin(psi)*math.cos(lam) + y*math.sin(psi)*math.sin(lam) - z*math.cos(psi))
+        dq_dlam = R/distance * math.cos(psi)*(x*math.sin(lam) - y*math.cos(lam))
 
-def distance_derivative_rect(position, satellite, distance):
-    return (position-satellite) / distance
+        return [dq_dpsi, dq_dlam]
+    else:
+        return (position-satellite) / distance
