@@ -48,20 +48,20 @@ def get_visible_satellites(where, when):
     return [transit_vis, gps_vis]
 
 
-def rho_rho2(pos_sph2, satellites, dist_real):
+def rho_rho2(pos_sph2, sats_cds, distances):
     """
     :param pos_sph2: [psi, lam] radians
-    :param satellites: [[x, y, z], [x, y, z]] rectangular
-    :param dist_real: [x, x] km
+    :param sats_cds: [[x, y, z], [x, y, z]] rectangular
+    :param distances: [x, x] km
     :param return: [psi, lam] radians
     """
     for i in range(1, 11):
         pos_sph3 = np.insert(pos_sph2, 0, [Earth.R])
         pos_rect = two_to_one(pos_sph3)
-        dist_approx = np.array([distance(pos_rect, sat) for sat in satellites])
+        dist_approx = np.array([distance(pos_rect, sat) for sat in sats_cds])
         print(dist_approx)
-        A = np.array([distance_derivative(pos_sph3, sat, dist, True) for sat, dist in zip(satellites, dist_approx)])
-        dd = dist_real - dist_approx
+        A = np.array([distance_derivative(pos_sph3, sat, dist, True) for sat, dist in zip(sats_cds, dist_approx)])
+        dd = distances - dist_approx
         dq = np.linalg.solve(A, dd)
         pos_sph2 += dq
 
@@ -72,19 +72,19 @@ def rho_rho2(pos_sph2, satellites, dist_real):
     return pos_sph2
 
 
-def rho_rho3(pos_sph3, satellites, dist_real):
+def rho_rho3(pos_sph3, sats_cds, distances):
     """
     :param pos_sph3: [R, psi, lam] km radians
-    :param satellites: [[x, y, z], [x, y, z], [x, y, z]] rectangular
-    :param dist_real: [x, x, x] km
+    :param sats_cds: [[x, y, z], [x, y, z], [x, y, z]] rectangular
+    :param distances: [x, x, x] km
     :param return: [R, psi, lam] km radians
     """
     pos_rect = two_to_one(pos_sph3)
 
     for i in range(1, 11):
-        dist_approx = np.array([distance(pos_rect, sat) for sat in satellites])
-        A = np.array([distance_derivative(pos_rect, sat, dist, False) for sat, dist in zip(satellites, dist_approx)])
-        dd = dist_real - dist_approx
+        dist_approx = np.array([distance(pos_rect, sat) for sat in sats_cds])
+        A = np.array([distance_derivative(pos_rect, sat, dist, False) for sat, dist in zip(sats_cds, dist_approx)])
+        dd = distances - dist_approx
         dq = np.linalg.solve(A, dd)
         pos_rect += dq
 
