@@ -1,13 +1,11 @@
 import math
 import numpy as np
+from earth import *
 from translations import *
 
 def minutes_since_spring_equinox(when):
     """
-    :type when: datetime.datetime
     :param when: datetime.datetime object in UTC timezone
-
-    :rtype: int
     :return: Number of minutes passed since spring equinox
     """
     b = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30]
@@ -16,19 +14,32 @@ def minutes_since_spring_equinox(when):
 
 def visible_from_ded_position(position, satellite):
     """
-    :type position: numpy.array
-    :param position: 1x3 numpy.array with position coordinates
-
-    :type satellite: numpy.array
-    :param satellite: 1x3 numpy.array with satellite coordinates
-
-    :rtype: bool
+    :param position: 1x3 numpy.array with position eq coordinates
+    :param satellite: 1x3 numpy.array with satellite eq coordinates
     :return: True if the satellite is visible from current position
     """
     return position.dot(satellite - position) >= 0
 
 
+def really_visible_from_ded_position(position, satellite):
+    """
+    :param position: 1x3 numpy.array with position eq coordinates
+    :param satellite: 1x3 numpy.array with satellite eq coordinates
+    :return: True if the satellite is visible from current position
+    """
+    left = position.dot(satellite - position)/(np.linalg.norm(satellite) * np.linalg.norm(satellite - position))
+    right = - np.sqrt(1 - Earth.R ** 2 / np.linalg.norm(position) ** 2)
+    # TODO: check for accuracy
+    # print(left, right, left > right)
+    return left > right
+
+
 def distance(position, satellite):
+    """
+    :param position: 1x3 numpy.array with position eq coordinates
+    :param satellite: 1x3 numpy.array with satellite eq coordinates
+    :return: distance between them in Euclidean metric
+    """
     return np.linalg.norm(position-satellite)
 
 

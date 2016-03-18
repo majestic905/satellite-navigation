@@ -39,10 +39,10 @@ def get_visible_satellites(where, when):
     transit_cds = map(lambda sat: sat.three_cds(minutes), transit_sats)
     gps_cds = map(lambda sat: sat.three_cds(minutes), gps_sats)
 
-    transit_vis = [i for i, sat_cds in enumerate(transit_cds, start=1) if visible_from_ded_position(point_cds, sat_cds)]
+    transit_vis = [i for i, sat_cds in enumerate(transit_cds, start=1) if really_visible_from_ded_position(point_cds, sat_cds)]
     print('Visible Transits:', list(transit_vis), sep='\n', end='\n\n')
 
-    gps_vis = [i for i, sat_cds in enumerate(gps_cds, start=1) if visible_from_ded_position(point_cds, sat_cds)]
+    gps_vis = [i for i, sat_cds in enumerate(gps_cds, start=1) if really_visible_from_ded_position(point_cds, sat_cds)]
     print('Visible GPSes:', list(gps_vis), sep='\n', end='\n\n')
 
     return [transit_vis, gps_vis]
@@ -53,7 +53,7 @@ def rho_rho2(pos_sph2, sats_cds, distances):
     :param pos_sph2: [psi, lam] radians
     :param sats_cds: [[x, y, z], [x, y, z]] rectangular
     :param distances: [x, x] km
-    :param return: [psi, lam] radians
+    :return: [psi, lam] radians
     """
     for i in range(1, 11):
         pos_sph3 = np.insert(pos_sph2, 0, [Earth.R])
@@ -77,7 +77,7 @@ def rho_rho3(pos_sph3, sats_cds, distances):
     :param pos_sph3: [R, psi, lam] km radians
     :param sats_cds: [[x, y, z], [x, y, z], [x, y, z]] rectangular
     :param distances: [x, x, x] km
-    :param return: [R, psi, lam] km radians
+    :return: [R, psi, lam] km radians
     """
     pos_rect = two_to_one(pos_sph3)
 
@@ -118,27 +118,27 @@ def get_transition_matrix(position, sats_cds, distances):
 
 
 if __name__ == '__main__':
-    # test_satellites_visibility()
+    test_satellites_visibility()
     # test_rho_rho2()
     # test_rho_rho3()
 
-    initial_point = np.radians([85, 20])
-    unknown_point = np.radians([87, 19])
-
-    msk_tz = timezone(timedelta(hours=3))
-    utc_tz = timezone(timedelta(hours=0))
-    when_msk = datetime(2015, 2, 15, 11, 10, 0, 0, msk_tz)
-    when_utc = when_msk.astimezone(utc_tz)
-
-    _, gps_indices = get_visible_satellites(unknown_point, when_utc)
-
-    minutes = minutes_since_spring_equinox(when_utc)
-    sats_cds = np.array([gps_sats[i].one_cds(minutes) for i in gps_indices])
-
-    unknown_point_rect = two_to_one(np.insert(unknown_point, 0, [Earth.R]))
-    distances = np.array([distance(unknown_point_rect, sat) for sat in sats_cds])
-
-    updated_point = rho_rho2(initial_point, sats_cds, distances)
-
-    print("Point we are at:", np.degrees(unknown_point))
-    print("Point we have located:", np.degrees(updated_point))
+    # initial_point = np.radians([85, 20])
+    # unknown_point = np.radians([87, 19])
+    #
+    # msk_tz = timezone(timedelta(hours=3))
+    # utc_tz = timezone(timedelta(hours=0))
+    # when_msk = datetime(2015, 2, 15, 11, 10, 0, 0, msk_tz)
+    # when_utc = when_msk.astimezone(utc_tz)
+    #
+    # _, gps_indices = get_visible_satellites(unknown_point, when_utc)
+    #
+    # minutes = minutes_since_spring_equinox(when_utc)
+    # sats_cds = np.array([gps_sats[i].one_cds(minutes) for i in gps_indices])
+    #
+    # unknown_point_rect = two_to_one(np.insert(unknown_point, 0, [Earth.R]))
+    # distances = np.array([distance(unknown_point_rect, sat) for sat in sats_cds])
+    #
+    # updated_point = rho_rho2(initial_point, sats_cds, distances)
+    #
+    # print("Point we are at:", np.degrees(unknown_point))
+    # print("Point we have located:", np.degrees(updated_point))
