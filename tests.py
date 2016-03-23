@@ -146,3 +146,36 @@ def test_transition_matrix():
 
     print(matrix9, sep='\n\n')
 
+
+def test_doppler():
+    ipoint_sph = np.array([Earth.R, radians(87), radians(19)])
+    rpoint_sph = np.array([Earth.R, radians(85), radians(20)])
+    print("Real point:", np.degrees(rpoint_sph[1:3]))
+    print("Initial point:", np.degrees(ipoint_sph[1:3]))
+
+    msk_tz = timezone(timedelta(hours=3))
+    utc_tz = timezone(timedelta(hours=0))
+    when_msk = datetime(2015, 2, 15, 11, 10, 0, 0, msk_tz)
+    when_utc = when_msk.astimezone(utc_tz)
+    minutes = minutes_since_spring_equinox(when_utc)
+    print("Date and time:", when_utc.isoformat(' '))
+    print("Minutes passed since vernal equinox:", minutes)
+
+    transit_indices, gps_indices = get_visible_satellites(rpoint_sph[1:3], when_utc)
+    visible_transits = [transit_sats[i-1] for i in transit_indices]
+    visible_gpses = [gps_sats[i-1] for i in gps_indices]
+    selected_sats = (visible_gpses + visible_transits)[0:3]
+    print("Visible satellites: Transit", transit_indices, "GPS", gps_indices)
+    print("Selected satellites (GPS + Transit):", (gps_indices + transit_indices)[0:3], end='\n\n')
+
+    rpoint_rect = spherical_to_rectangular(rpoint_sph)
+    sats_positions = [sat.coordinates_greenwich(minutes) for sat in selected_sats]
+    sats_speeds = [sat.speed_greenwich(minutes) for sat in selected_sats]
+    sats_dists = [distance(rpoint_rect, sat_pos) for sat_pos in sats_positions]
+
+    rho_dot_real = [rho_dot(rpoint_rect, sat_pos, np.array([0, 0, 0]), sat_speed, sat_dist)
+                    for (sat_pos, sat_speed, sat_dist) in zip(sats_positions, sats_speeds, sats_dists)]
+
+    rpoint_sph_doppler = doppler(ipoint_sph, np.array([0, 0, 0]), sats_positions, sats_speeds, rho_dot_real, display=True)
+    print("Real point:", np.degrees(rpoint_sph[1:3]))
+    print("Computed point:", np.degrees(rpoint_sph_doppler[1:3]))

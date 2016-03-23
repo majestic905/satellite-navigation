@@ -19,6 +19,7 @@ def get_visible_satellites(where, when, display=False):
     """
     :param where: [psi, lam] radians - position spherical coordinates
     :param when: datetime.datetime with timezone - date and time
+    :param display: bool - defines whether to display information or not
     :return: [[a, b], [c, d]] - Transit and GPS satellites indices
     """
     # TODO: what are thees? latitude and longitude?
@@ -55,6 +56,7 @@ def rho_rho2(pos_sph2, sats_cds, distances, display=False):
     :param pos_sph2: [psi, lam] radians - approximate position
     :param sats_cds: [[x, y, z], [x, y, z]] rectangular - visible satellites coordinates
     :param distances: [x, x] km - measured distances to satellites from position
+    :param display: bool - defines whether to display information or not
     :return: [psi, lam] radians - more accurate position
     """
     for i in range(1, 11):
@@ -74,31 +76,31 @@ def rho_rho2(pos_sph2, sats_cds, distances, display=False):
     return pos_sph2
 
 
-def rho_rho3(pos_sph3, sats_cds, distances, display=False):
+def rho_rho3(position, sats_cds, distances, display=False):
     """
-    :param pos_sph3: [R, psi, lam] km radians - approximate position, R isn't necessary Earth's radius
+    :param position: [R, psi, lam] km radians - approximate position, R isn't necessary Earth's radius
     :param sats_cds: [[x, y, z], [x, y, z], [x, y, z]] rectangular - visible satellites coordinates
     :param distances: [x, x, x] km - measured distances to satellites from position
+    :param display: bool - defines whether to display information or not
     :return: [R, psi, lam] km radians - more accurate position
     """
-    pos_rect = spherical_to_rectangular(pos_sph3)
+    position = spherical_to_rectangular(position)
 
     for i in range(1, 11):
-        dist_approx = np.array([distance(pos_rect, sat) for sat in sats_cds])
-        A = np.array([distance_derivative(pos_rect, sat, dist, False) for sat, dist in zip(sats_cds, dist_approx)])
+        dist_approx = np.array([distance(position, sat) for sat in sats_cds])
+        A = np.array([distance_derivative(position, sat, dist, False) for sat, dist in zip(sats_cds, dist_approx)])
         dd = distances - dist_approx
         dq = np.linalg.solve(A, dd)
-        pos_rect += dq
+        position += dq
 
         if display:
-            pos_sph3 = rectangular_to_spherical(pos_rect)
-            pos_sph3_deg = np.array([pos_sph3[0], np.degrees(pos_sph3[1]), np.degrees(pos_sph3[2])])
+            pos_sph3_rad = rectangular_to_spherical(position)
+            pos_sph3_deg = np.array([pos_sph3_rad[0], degrees(pos_sph3_rad[1]), degrees(pos_sph3_rad[2])])
             print("Step:", i)
             print("dq: {}, norm: {}".format(dq, np.linalg.norm(dq)))
             print("Position:", pos_sph3_deg, end='\n\n')
 
-    pos_sph3 = rectangular_to_spherical(pos_rect)
-    return pos_sph3
+    return rectangular_to_spherical(position)
 
 
 def get_transition_matrix(position, sats_cds, distances):
@@ -120,55 +122,38 @@ def get_transition_matrix(position, sats_cds, distances):
     return M
 
 
-def doppler():
-    ipoint_sph = np.array([Earth.R, radians(87), radians(19)])
-    rpoint_sph = np.array([Earth.R, radians(85), radians(20)])
-    ipoint_rect = spherical_to_rectangular(ipoint_sph)
-    rpoint_rect = spherical_to_rectangular(rpoint_sph)
-    print("Real point:", np.degrees(rpoint_sph[1:3]), rpoint_rect)
-    print("Initial point:", np.degrees(ipoint_sph[1:3]), ipoint_rect)
-
-    msk_tz = timezone(timedelta(hours=3))
-    utc_tz = timezone(timedelta(hours=0))
-    when_msk = datetime(2015, 7, 11, 23, 00, 0, 0, msk_tz)
-    when_utc = when_msk.astimezone(utc_tz)
-    minutes = minutes_since_spring_equinox(when_utc)
-    print("Date and time:", when_utc.isoformat(' '))
-    print("Minutes passed since vernal equinox:", minutes)
-
-    transit_indices, gps_indices = get_visible_satellites(rpoint_sph[1:3], when_utc)
-    print("Visible satellites: Transit", transit_indices, "GPS", gps_indices)
-
-    visible_transits = [transit_sats[i-1] for i in transit_indices]
-    visible_gpses = [gps_sats[i-1] for i in gps_indices]
-    selected_sats = (visible_gpses + visible_transits)[0:3]
-    print("Selected satellites (GPS + Transit):", (gps_indices + transit_indices)[0:3], end='\n\n')
-
-    sats_positions = [sat.coordinates_greenwich(minutes) for sat in selected_sats]
-    sats_speeds = [sat.speed_greenwich(minutes) for sat in selected_sats]
-    sats_dists = [distance(rpoint_rect, sat_pos) for sat_pos in sats_positions]
-
-    rho_dot_real = [rho_dot(rpoint_rect, sat_pos, np.array([0, 0, 0]), sat_speed, sat_dist)
-                    for (sat_pos, sat_speed, sat_dist) in zip(sats_positions, sats_speeds, sats_dists)]
+def doppler(position, speed, sats_positions, sats_speeds, doppler_value_measured, display=False):
+    """
+    :param position: [R, psi, lam] km radians
+    :param speed: [xdot, ydot, zdot] ?
+    :param sats_positions: [[x, y, z], [x, y, z], [x, y, z]] - in greenwich coordinates
+    :param sats_speeds: [[xdot, ydot, zdot], ...] - in greenwich coordinates
+    :param doppler_value_measured: [rhodot1, rhodot2, rhodot3] - for each satellite
+    :param display: bool - defines whether to display information or not
+    :return: [R, psi, lam] km radians - more accurate position
+    """
+    position = spherical_to_rectangular(position)
 
     for i in range(1, 11):
-        sats_dists = np.array([distance(ipoint_rect, sat_position) for sat_position in sats_positions])
-        rho_dot_approx = np.array([rho_dot(ipoint_rect, sat_pos, np.array([0, 0, 0]), sat_speed, sat_dist)
+        sats_dists = [distance(position, sat_pos) for sat_pos in sats_positions]
+        doppler_value_computed = np.array([rho_dot(position, sat_pos, speed, sat_speed, sat_dist)
                                 for (sat_pos, sat_speed, sat_dist) in zip(sats_positions, sats_speeds, sats_dists)])
-        drho_dot = rho_dot_real - rho_dot_approx
-        B = np.array([rho_dot_derivative(ipoint_rect, sat_pos, np.array([0, 0, 0]), sat_speed, sat_dist)
+        drho_dot = doppler_value_measured - doppler_value_computed
+        B = np.array([rho_dot_derivative(position, sat_pos, speed, sat_speed, sat_dist)
                         for (sat_pos, sat_speed, sat_dist) in zip(sats_positions, sats_speeds, sats_dists)])
         dq = np.linalg.solve(B, drho_dot)
         dq_norm = np.linalg.norm(dq)
-        ipoint_rect += dq
+        position += dq
 
-        ipoint_sph2 = rectangular_to_spherical(ipoint_rect)[1:3]
-        print("Step:", i)
-        print("dq: {}, norm: {}".format(dq, dq_norm))
-        print("Position:", np.degrees(ipoint_sph2), end='\n\n')
+        if display:
+            print("Step:", i)
+            print("dq: {}, norm: {}".format(dq, dq_norm))
+            print("Position:", np.degrees(rectangular_to_spherical(position)[1:3]), end='\n\n')
 
         if dq_norm < 1e-6:
             break
+
+    return rectangular_to_spherical(position)
 
 
 if __name__ == '__main__':
@@ -176,26 +161,4 @@ if __name__ == '__main__':
     # test_rho_rho2()
     # test_rho_rho3()
     # test_transition_matrix()
-    # TODO: test_doppler()
-    doppler()
-
-    # initial_point = np.radians([85, 20])
-    # unknown_point = np.radians([87, 19])
-    #
-    # msk_tz = timezone(timedelta(hours=3))
-    # utc_tz = timezone(timedelta(hours=0))
-    # when_msk = datetime(2015, 2, 15, 11, 10, 0, 0, msk_tz)
-    # when_utc = when_msk.astimezone(utc_tz)
-    #
-    # _, gps_indices = get_visible_satellites(unknown_point, when_utc)
-    #
-    # minutes = minutes_since_spring_equinox(when_utc)
-    # sats_cds = np.array([gps_sats[i].one_cds(minutes) for i in gps_indices])
-    #
-    # unknown_point_rect = two_to_one(np.insert(unknown_point, 0, [Earth.R]))
-    # distances = np.array([distance(unknown_point_rect, sat) for sat in sats_cds])
-    #
-    # updated_point = rho_rho2(initial_point, sats_cds, distances)
-    #
-    # print("Point we are at:", np.degrees(unknown_point))
-    # print("Point we have located:", np.degrees(updated_point))
+    test_doppler()
