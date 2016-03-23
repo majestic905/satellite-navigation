@@ -1,5 +1,5 @@
 import numpy as np
-import math
+from math import sin, cos, radians
 
 from utils import *
 from translations import *
@@ -10,44 +10,54 @@ class Satellite:
     # eps, omega = 0, 0
 
     def __init__(self, omega_big, tau):
-        self.omega_big = math.radians(omega_big)
+        self.omega_big = radians(omega_big)
         self.tau = tau
         self.i, self.R, self.w = 0, 0, 0
 
-    def one_cds(self, minutes):
+    def coordinates_equatorial(self, minutes):
         # u = self.omega + self.w*(t-self.tau)  # omega = 0
         u = self.w*(minutes - self.tau)
 
-        in_orbit_plane = self.R*np.array([math.cos(u), math.sin(u), 0])
+        in_orbit_plane = self.R*np.array([cos(u), sin(u), 0])
 
-        around_x = np.array([[1,                0,                 0],
-                             [0, math.cos(self.i), -math.sin(self.i)],
-                             [0, math.sin(self.i),  math.cos(self.i)]])
+        around_x = np.array([[1,           0,            0],
+                             [0, cos(self.i), -sin(self.i)],
+                             [0, sin(self.i),  cos(self.i)]])
 
-        around_z = np.array([[math.cos(self.omega_big), -math.sin(self.omega_big), 0],
-                             [math.sin(self.omega_big),  math.cos(self.omega_big), 0],
-                             [                       0,                         0, 1]])
+        around_z = np.array([[cos(self.omega_big), -sin(self.omega_big), 0],
+                             [sin(self.omega_big),  cos(self.omega_big), 0],
+                             [                  0,                    0, 1]])
 
         return around_z.dot(around_x).dot(in_orbit_plane)
 
-    def three_cds(self, minutes):
-        sidereal_time = Earth.w_sun*minutes
-        gamma = sidereal_time + Earth.w_self*minutes
+    def coordinates_greenwich(self, minutes):
+        gamma = Earth.w_sun*minutes + Earth.w_self*minutes
+        return greenwich_to_equatorial(self.coordinates_equatorial(minutes), gamma)
 
-        return three_to_one(self.one_cds(minutes), gamma)
+    def speed_equatorial(self, minutes):
+        u = self.w*(minutes - self.tau)
+
+        return self.R * self.w * \
+               np.array([-sin(u)*cos(self.omega_big) - cos(u)*sin(self.omega_big)*cos(self.i),
+                         -sin(u)*sin(self.omega_big) + cos(u)*cos(self.omega_big)*cos(self.i),
+                         cos(u)*sin(self.i)])
+
+    def speed_greenwich(self, minutes):
+        gamma = Earth.w_sun*minutes + Earth.w_self*minutes
+        return equatorial_to_greenwich(self.speed_equatorial(minutes), gamma)
 
 
 class TransitSatellite(Satellite):
     def __init__(self, omega_big, tau):
         super().__init__(omega_big, tau)
-        self.i = math.radians(90)  # degrees -> radians
+        self.i = radians(90)  # degrees -> radians
         self.R = 7500  # km
-        self.w = math.radians(3)  # degrees/min -> radians/min
+        self.w = radians(3)  # degrees/min -> radians/min
 
 
 class GPSSatellite(Satellite):
     def __init__(self, omega_big, tau):
         super().__init__(omega_big, tau)
-        self.i = math.radians(60)  # degrees -> radians
+        self.i = radians(60)  # degrees -> radians
         self.R = 15000  # km
-        self.w = math.radians(2)  # degrees/min -> radians/min
+        self.w = radians(2)  # degrees/min -> radians/min
