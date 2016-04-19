@@ -32,7 +32,8 @@ class Satellite:
 
     def coordinates_greenwich(self, minutes):
         gamma = Earth.w_sun*minutes + Earth.w_self*minutes
-        return greenwich_to_equatorial(self.coordinates_equatorial(minutes), gamma)
+        # return greenwich_to_equatorial(self.coordinates_equatorial(minutes), gamma)
+        return equatorial_to_greenwich(self.coordinates_equatorial(minutes), gamma)
 
     def speed_equatorial(self, minutes):
         u = self.w*(minutes - self.tau)

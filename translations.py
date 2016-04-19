@@ -4,16 +4,16 @@ from math import sin, cos, atan2, sqrt
 
 # TODO: CHECK THE FUCKING ACCURACY. WHERE THE MINUS IS SUPPOSED TO BE?
 def greenwich_to_equatorial(greenwich, gamma):
-    matrix = np.array([[ cos(gamma),  sin(gamma), 0],
-                       [-sin(gamma),  cos(gamma), 0],
+    matrix = np.array([[ cos(gamma),  -sin(gamma), 0],
+                       [sin(gamma),  cos(gamma), 0],
                        [         0,           0, 1]])
     return matrix.dot(greenwich)
 
 
 # TODO: CHECK THE FUCKING ACCURACY. WHERE THE MINUS IS SUPPOSED TO BE?
 def equatorial_to_greenwich(equatorial, gamma):
-    matrix = np.array([[cos(gamma), -sin(gamma), 0],
-                       [sin(gamma),  cos(gamma), 0],
+    matrix = np.array([[cos(gamma), sin(gamma), 0],
+                       [-sin(gamma),  cos(gamma), 0],
                        [          0,          0, 1]])
     return matrix.dot(equatorial)
 

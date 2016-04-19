@@ -78,24 +78,24 @@ def test_rho_rho2():
     satellites = [[8676.21, -2487.86, 4305.11],
                   [9146.41, 2280.46, -3338.07]]
     distances = np.array([5339.75, 5101.44])
-    # assert task_two(position, satellites, distances) == True
-    rho_rho2(position, satellites, distances, display=True)
+    answer = rho_rho2(position, satellites, distances, display=True)
+    assert np.linalg.norm(answer - np.array([1.7, -0.55])) < 1e-2
 
     # 2
     position = np.radians([0.5, 0.5])
     satellites = [[8738.36, -2259.89, 4305.11],
                   [9083.58, 2519.10, -3338.07]]
     distances = np.array([5468.63, 4986.28])
-    # assert task_two(position, satellites, distances) == True
-    rho_rho2(position, satellites, distances, display=True)
+    answer = rho_rho2(position, satellites, distances, display=True)
+    assert np.linalg.norm(answer - np.array([0.15, 0.9])) < 1e-3
 
     # 3
     position = np.radians([1, 1])
     satellites = [[8720.96, -2174.38, 4383.71],
                   [9088.91, 2606.2, -3255.68]]
     distances = np.array([5196.41, 5277.57])
-    # assert task_two(position, satellites, distances) == True
-    rho_rho2(position, satellites, distances, display=True)
+    answer = rho_rho2(position, satellites, distances, display=True)
+    assert np.linalg.norm(answer - np.array([2.2, -1.7])) < 1e-3
 
 
 def test_rho_rho3():
@@ -105,7 +105,8 @@ def test_rho_rho3():
                            [9174.33, 2287.42, -3255.68],
                            [8974.15, -3444.85, 2756.37]])
     distances = np.array([5141.61, 4691.28, 4656.23])
-    rho_rho3(position, satellites, distances, display=True)
+    answer = rho_rho3(position, satellites, distances, display=True)
+    assert np.linalg.norm(answer - np.array([7000, 0.7, -1.5])) < 1e-2
 
 
 def test_transition_matrix():
@@ -143,27 +144,26 @@ def test_transition_matrix():
     dist_real = np.array([[5389.83, 5059.78],
                           [5357.92, 5088.64]])
     matrix9 = get_transition_matrix(coords, satellites, dist_real)
-
     print(matrix9, sep='\n\n')
 
 
 def test_doppler():
-    ipoint_sph = np.array([Earth.R, radians(87), radians(19)])
-    rpoint_sph = np.array([Earth.R, radians(85), radians(20)])
+    ipoint_sph = np.array([Earth.R, radians(61.5), radians(57.5)])
+    rpoint_sph = np.array([Earth.R, radians(70), radians(50)])
     print("Real point:", np.degrees(rpoint_sph[1:3]))
     print("Initial point:", np.degrees(ipoint_sph[1:3]))
 
     msk_tz = timezone(timedelta(hours=3))
     utc_tz = timezone(timedelta(hours=0))
-    when_msk = datetime(2015, 2, 15, 11, 10, 0, 0, msk_tz)
+    when_msk = datetime(2015, 6, 11, 23, 0, 0, 0, msk_tz)
     when_utc = when_msk.astimezone(utc_tz)
     minutes = minutes_since_spring_equinox(when_utc)
     print("Date and time:", when_utc.isoformat(' '))
     print("Minutes passed since vernal equinox:", minutes)
 
     transit_indices, gps_indices = get_visible_satellites(rpoint_sph[1:3], when_utc)
-    visible_transits = [transit_sats[i-1] for i in transit_indices]
-    visible_gpses = [gps_sats[i-1] for i in gps_indices]
+    visible_transits = [transit_sats[i - 1] for i in transit_indices]
+    visible_gpses = [gps_sats[i - 1] for i in gps_indices]
     selected_sats = (visible_gpses + visible_transits)[0:3]
     print("Visible satellites: Transit", transit_indices, "GPS", gps_indices)
     print("Selected satellites (GPS + Transit):", (gps_indices + transit_indices)[0:3], end='\n\n')
@@ -176,6 +176,68 @@ def test_doppler():
     rho_dot_real = [rho_dot(rpoint_rect, sat_pos, np.array([0, 0, 0]), sat_speed, sat_dist)
                     for (sat_pos, sat_speed, sat_dist) in zip(sats_positions, sats_speeds, sats_dists)]
 
-    rpoint_sph_doppler = doppler(ipoint_sph, np.array([0, 0, 0]), sats_positions, sats_speeds, rho_dot_real, display=True)
+    rpoint_sph_doppler = doppler(ipoint_sph, np.array([0, 0, 0]), sats_positions, sats_speeds, rho_dot_real,
+                                 display=True)
     print("Real point:", np.degrees(rpoint_sph[1:3]))
     print("Computed point:", np.degrees(rpoint_sph_doppler[1:3]))
+
+    assert np.linalg.norm(rpoint_sph - rpoint_sph_doppler) < 1e-3
+
+
+def test_final():
+    # вариант 1
+    ipoint_sph = np.array([Earth.R, radians(61.5), radians(57.5)])
+    print("Initial point:", np.degrees(ipoint_sph[1:3]))
+
+    msk_tz = timezone(timedelta(hours=3))
+    utc_tz = timezone(timedelta(hours=0))
+    when_msk = datetime(2015, 7, 11, 23, 0, 0, 0, msk_tz)
+    when_utc = when_msk.astimezone(utc_tz)
+    minutes = minutes_since_spring_equinox(when_utc)
+    print("Date and time:", when_utc.isoformat(' '))
+    print("Minutes passed since vernal equinox:", minutes)
+
+    selected_sats = [gps_sats[1], gps_sats[2], gps_sats[4]]
+    sats_positions = [sat.coordinates_greenwich(minutes) for sat in selected_sats]
+    sats_speeds = [sat.speed_greenwich(minutes) for sat in selected_sats]
+
+    rho_dot = np.array([-186.691, 181.051, -29.2095])
+
+    rpoint_sph_doppler = doppler(ipoint_sph, np.array([0, 0, 0]), sats_positions, sats_speeds, rho_dot, display=True)
+    answer = np.degrees(rpoint_sph_doppler[1:3])
+    print("Computed point:", answer)
+
+    assert np.linalg.norm(answer - np.array([59.5, 59])) < 1e-3
+
+    # вариант 2
+    ipoint_sph = np.array([Earth.R, radians(55), radians(51)])
+    print("Initial point:", np.degrees(ipoint_sph[1:3]))
+
+    msk_tz = timezone(timedelta(hours=3))
+    utc_tz = timezone(timedelta(hours=0))
+    when_msk = datetime(2015, 7, 11, 23, 0, 0, 0, msk_tz)
+    when_utc = when_msk.astimezone(utc_tz)
+    minutes = minutes_since_spring_equinox(when_utc)
+    print("Date and time:", when_utc.isoformat(' '))
+    print("Minutes passed since vernal equinox:", minutes)
+
+    selected_sats = [gps_sats[1], gps_sats[2], gps_sats[4]]
+    sats_positions = [sat.coordinates_greenwich(minutes) for sat in selected_sats]
+    sats_speeds = [sat.speed_greenwich(minutes) for sat in selected_sats]
+
+    rho_dot = np.array([-171.837, 195.259, -11.606])
+
+    rpoint_sph_doppler = doppler(ipoint_sph, np.array([0, 0, 0]), sats_positions, sats_speeds, rho_dot, display=True)
+    answer = np.degrees(rpoint_sph_doppler[1:3])
+    print("Computed point:", answer)
+
+    assert np.linalg.norm(answer - np.array([53.5, 54])) < 1e-3
+
+
+if __name__ == '__main__':
+    # test_satellites_visibility()
+    # test_rho_rho2()
+    # test_rho_rho3()
+    # test_transition_matrix()
+    # test_doppler()
+    test_final()
