@@ -233,6 +233,30 @@ def test_final():
 
     assert np.linalg.norm(answer - np.array([53.5, 54])) < 1e-3
 
+    # вариант 18 (спасибо Анне)
+    ipoint_sph = np.array([Earth.R, radians(44.5), radians(53.5)])
+    print("Initial point:", np.degrees(ipoint_sph[1:3]))
+
+    msk_tz = timezone(timedelta(hours=3))
+    utc_tz = timezone(timedelta(hours=0))
+    when_msk = datetime(2015, 7, 11, 23, 0, 0, 0, msk_tz)
+    when_utc = when_msk.astimezone(utc_tz)
+    minutes = minutes_since_spring_equinox(when_utc)
+    print("Date and time:", when_utc.isoformat(' '))
+    print("Minutes passed since vernal equinox:", minutes)
+
+    selected_sats = [gps_sats[1], gps_sats[2], gps_sats[4]]
+    sats_positions = [sat.coordinates_greenwich(minutes) for sat in selected_sats]
+    sats_speeds = [sat.speed_greenwich(minutes) for sat in selected_sats]
+
+    rho_dot = np.array([-146.957, 210.988, 11.1321])
+
+    rpoint_sph_doppler = doppler(ipoint_sph, np.array([0, 0, 0]), sats_positions, sats_speeds, rho_dot, display=True)
+    answer = np.degrees(rpoint_sph_doppler[1:3])
+    print("Computed point:", answer)
+
+    assert np.linalg.norm(answer - np.array([43.5, 52.5])) < 1e-3
+
 
 if __name__ == '__main__':
     # test_satellites_visibility()

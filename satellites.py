@@ -45,7 +45,7 @@ class Satellite:
 
     def speed_greenwich(self, minutes):
         gamma = Earth.w_sun*minutes + Earth.w_self*minutes
-        return equatorial_to_greenwich(self.speed_equatorial(minutes), gamma)
+        return greenwich_to_equatorial(self.speed_equatorial(minutes), gamma)
 
 
 class TransitSatellite(Satellite):
